@@ -1,61 +1,25 @@
 # Eager Diagnostic Invalidation for Agentic LSP Clients
 
-## Thesis
+## Why
 
-For interactive editors, brief diagnostic staleness after `textDocument/didChange` is usually acceptable UX.
-For agentic clients, that same staleness is a correctness problem: diagnostics are machine input to decision loops.
+LSP diagnostic debounce is a good default for human-driven editors: it reduces flicker while users are typing.
 
-This proposal adds an opt-in server behavior to invalidate diagnostics immediately after a change so programmatic clients do not act on stale results.
+For programmatic clients, diagnostics are decision input. After `textDocument/didChange`, stale diagnostics can cause incorrect actions: re-fixing resolved issues, missing newly introduced issues, or looping on obsolete errors.
 
-## Why This Matters
+This proposal adds an opt-in server behavior that clears diagnostics for the changed file immediately, then publishes fresh diagnostics when analysis completes. The default remains `false` to preserve editor UX.
 
-LSP servers are optimized for GUI editors. Debouncing diagnostics reduces flicker while a human is still typing. This default is sensible and should remain unchanged.
+## Behavior
 
-Agentic workflows are different:
-
-- an agent edits a file
-- immediately reads diagnostics
-- decides next action from those diagnostics
-
-If diagnostics are stale in that window, the agent may:
-
-- re-fix an already fixed issue
-- miss a newly introduced issue
-- loop on diagnostics that no longer apply
-
-So the problem is not "slightly delayed UI." It is "incorrect state observed by an automated consumer."
-
-We implemented this behavior across four widely used language ecosystems:
-
-- `pyright` (Python)
-- `rust-analyzer` (Rust)
-- `gopls` (Go)
-- `typescript-language-server` (TypeScript)
-
-TypeScript and Python usage trends are growing rapidly, as reflected in the GitHub Octoverse 2025 report. This does not directly prove agentic tool distribution, but it supports the inference that improving correctness in these ecosystems has high practical impact.
-
-## Proposed Behavior
-
-Add a per-server, opt-in setting that enables eager diagnostic invalidation on `didChange`.
-
-When enabled:
+When eager invalidation is enabled:
 
 1. Client sends `textDocument/didChange`.
-2. Server ensures diagnostics for that file are cleared before fresh analysis results arrive.
-3. Server continues normal analysis/debounce pipeline.
+2. Server clears diagnostics for that file (or equivalent behavior via its version-aware publish path).
+3. Server continues its normal analysis/debounce pipeline.
 4. Server publishes fresh diagnostics when analysis completes.
 
-When disabled (default):
+When disabled (`false`, default), existing editor-oriented behavior is unchanged.
 
-- Existing behavior is preserved for editor-centric workflows.
-- GUI clients avoid extra diagnostic flicker from transient "clear then republish" cycles.
-
-## Design Principle
-
-Default mode remains optimized for humans (stable UI).  
-Opt-in mode is optimized for programmatic correctness (no stale diagnostic state between edits).
-
-## Configuration (Current Implementations)
+## Configuration (Current Upstream Work)
 
 | Server | Setting | Default |
 |---|---|---|
@@ -64,17 +28,17 @@ Opt-in mode is optimized for programmatic correctness (no stale diagnostic state
 | [gopls](https://github.com/golang/tools) | `eagerDiagnosticsClear` | `false` |
 | [typescript-language-server](https://github.com/typescript-language-server/typescript-language-server) | `diagnostics.eagerClear` | `false` |
 
-Setting names follow each project's established configuration style.
+Setting names follow each project's existing configuration style.
 
-## Ordering and Versioning Notes
+## Ordering and Version Notes
 
-`textDocument/publishDiagnostics` notifications are not globally ordered by the protocol. Implementations should rely on both timing and version semantics, not timing alone.
+`textDocument/publishDiagnostics` notifications are not globally ordered by the protocol.
 
-In practice, eager invalidation is triggered synchronously during `didChange` handling, before asynchronous reanalysis publishes fresh results. `didChange` is a notification, not a request.
+In these implementations, invalidation is triggered during `didChange` handling before async reanalysis publishes fresh results. Clients should still treat version semantics as authoritative.
 
-Version-aware servers/clients provide extra safety: stale diagnostics tagged to older document versions can be dropped if reordering occurs.
+Version-aware servers/clients can drop stale diagnostics tagged to older document versions if reordering occurs.
 
-## Concrete Example
+## Example
 
 Without eager invalidation:
 
@@ -96,32 +60,29 @@ T3: Reanalysis finishes -> fresh diagnostics published
 
 ## Related but Separate: Client Version Compliance
 
-Some clients incorrectly reuse document version numbers in `didChange`.
-That is an independent spec-compliance issue and can cause servers to discard updates.
+Some clients incorrectly reuse document version numbers in `didChange`. That is a separate spec-compliance bug and can cause servers to discard updates.
 
-These are distinct failure modes:
+Both are required for reliable agentic workflows:
 
-- fixing version compliance alone does not remove stale diagnostics between edits
-- fixing eager invalidation alone does not correct non-monotonic version bugs
-
-Reliable agentic workflows need both.
+- version compliance alone does not remove stale diagnostics between edits
+- eager invalidation alone does not correct non-monotonic version bugs
 
 ## Implementation Summary
 
-- **pyright**: reuses existing diagnostics tracking (`documentsWithDiagnostics`) and workspace settings.
-- **rust-analyzer**: reuses `clear_native_for()` path in `didChange`; config integrated via standard diagnostics config path.
-- **gopls**: uses existing version-filtered publish pipeline so stale cached diagnostics are naturally excluded after version bump.
+- **pyright**: reuses diagnostics tracking (`documentsWithDiagnostics`) and workspace settings.
+- **rust-analyzer**: reuses `clear_native_for()` in `didChange`; config integrated via diagnostics settings.
+- **gopls**: uses version-filtered publish behavior so stale cached diagnostics are excluded after version bump.
 - **typescript-language-server**: reuses close-path invalidation behavior to cancel pending debounced publishes before clear.
 
 ## Status
 
-This is active work.
+This is active upstream work.
 
-- **pyright**: pending
-- **rust-analyzer**: pending
-- **gopls**: pending (Gerrit)
-- **typescript-language-server**: pending
-- **Claude Code client issue**: pending (`didChange` version monotonicity)
+- **pyright**: [target repo](https://github.com/Microsoft/pyright) | [draft PR text](./pr-drafts.md#2-pyright-pr) | upstream PR: not opened
+- **rust-analyzer**: [target repo](https://github.com/rust-lang/rust-analyzer) | [draft PR text](./pr-drafts.md#3-rust-analyzer-pr) | upstream PR: not opened
+- **gopls**: [target repo](https://github.com/golang/tools) | [draft PR text](./pr-drafts.md#4-gopls-pr) | Gerrit CL: not opened
+- **typescript-language-server**: [target repo](https://github.com/typescript-language-server/typescript-language-server) | [draft PR text](./pr-drafts.md#1-typescript-language-server-pr) | upstream PR: not opened
+- **Client issue (`didChange` version monotonicity)**: [target repo](https://github.com/anthropics/claude-code) | [draft issue text](./pr-drafts.md#5-claude-code-github-issue) | issue: not opened
 
 ## License
 
