@@ -80,7 +80,7 @@ This is active upstream work.
 
 - **pyright**: [PR #11306](https://github.com/microsoft/pyright/pull/11306)
 - **rust-analyzer**: [PR #21741](https://github.com/rust-lang/rust-analyzer/pull/21741)
-- **gopls**: pending (Gerrit)
+- **gopls**: [PR #620](https://github.com/golang/tools/pull/620) (Gopherbot syncs to Gerrit)
 - **typescript-language-server**: [PR #1064](https://github.com/typescript-language-server/typescript-language-server/pull/1064)
 - **Claude Code** (`didChange` version monotonicity): [Issue #30622](https://github.com/anthropics/claude-code/issues/30622)
 
