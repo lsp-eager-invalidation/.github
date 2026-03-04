@@ -78,11 +78,11 @@ Both are required for reliable agentic workflows:
 
 This is active upstream work.
 
-- **pyright**: [target repo](https://github.com/Microsoft/pyright) | [draft PR text](./pr-drafts.md#2-pyright-pr) | upstream PR: not opened
-- **rust-analyzer**: [target repo](https://github.com/rust-lang/rust-analyzer) | [draft PR text](./pr-drafts.md#3-rust-analyzer-pr) | upstream PR: not opened
-- **gopls**: [target repo](https://github.com/golang/tools) | [draft PR text](./pr-drafts.md#4-gopls-pr) | Gerrit CL: not opened
-- **typescript-language-server**: [target repo](https://github.com/typescript-language-server/typescript-language-server) | [draft PR text](./pr-drafts.md#1-typescript-language-server-pr) | upstream PR: not opened
-- **Client issue (`didChange` version monotonicity)**: [target repo](https://github.com/anthropics/claude-code) | [draft issue text](./pr-drafts.md#5-claude-code-github-issue) | issue: not opened
+- **pyright**: [PR #11306](https://github.com/microsoft/pyright/pull/11306)
+- **rust-analyzer**: [PR #21741](https://github.com/rust-lang/rust-analyzer/pull/21741)
+- **gopls**: pending (Gerrit)
+- **typescript-language-server**: [PR #1064](https://github.com/typescript-language-server/typescript-language-server/pull/1064)
+- **Claude Code** (`didChange` version monotonicity): [Issue #30622](https://github.com/anthropics/claude-code/issues/30622)
 
 ## License
 
